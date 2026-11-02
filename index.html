@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AIペットマグ</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;background:#0d0f24;color:#eef;min-height:100vh;display:flex;justify-content:center}
+#app{width:100%;max-width:440px;min-height:100vh;background:radial-gradient(ellipse at 50% 0%,#2b2f6b 0%,#14163a 55%,#0d0f24 100%);position:relative;overflow:hidden;display:flex;flex-direction:column}
+.stars{position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(1px 1px at 20% 30%,#fff8,transparent),radial-gradient(1px 1px at 70% 15%,#fff9,transparent),radial-gradient(1.5px 1.5px at 85% 60%,#fff6,transparent),radial-gradient(1px 1px at 35% 75%,#fff7,transparent),radial-gradient(1px 1px at 55% 45%,#fff5,transparent)}
+header{padding:14px 16px 4px;display:flex;align-items:center;justify-content:space-between;z-index:2}
+header h1{font-size:18px;letter-spacing:.05em;background:linear-gradient(90deg,#ffd27a,#ff9ec7,#9ad8ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.badge{font-size:11px;padding:3px 8px;border-radius:99px;background:#ffffff18;border:1px solid #ffffff22}
+.screen{display:none;flex:1;flex-direction:column;z-index:2;padding:8px 16px 16px}
+.screen.on{display:flex}
+.card{background:#ffffff12;border:1px solid #ffffff1f;border-radius:18px;padding:16px;backdrop-filter:blur(6px)}
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:13px;font-size:15px;font-weight:700;color:#1b1640;background:linear-gradient(135deg,#ffd27a,#ff9ec7);cursor:pointer;font-family:inherit;margin-top:10px;transition:transform .1s}
+.btn:active{transform:scale(.97)}
+.btn.ghost{background:#ffffff14;color:#eef;border:1px solid #ffffff2a;font-weight:500}
+.btn.small{display:inline-block;width:auto;padding:9px 14px;font-size:13px;margin:0}
+.q-title{font-size:13px;opacity:.7;margin-bottom:6px}.q-text{font-size:18px;font-weight:700;margin-bottom:12px;line-height:1.5}
+.prog{height:6px;background:#ffffff18;border-radius:9px;overflow:hidden;margin-bottom:16px}.prog i{display:block;height:100%;background:linear-gradient(90deg,#9ad8ff,#ff9ec7);transition:width .3s}
+.stage{position:relative;height:300px;display:flex;align-items:center;justify-content:center}
+.stage svg{width:280px;height:280px;overflow:visible}
+input[type=text]{width:100%;padding:12px 14px;border-radius:12px;border:1px solid #ffffff33;background:#0006;color:#fff;font-size:16px;font-family:inherit}
+.center{text-align:center}.mt{margin-top:12px}.dim{opacity:.7;font-size:13px}
+.tabs{display:flex;gap:6px;margin:6px 0 10px}.tabs button{flex:1;padding:9px;border-radius:12px;border:1px solid #ffffff22;background:#ffffff0d;color:#ccd;font-family:inherit;font-size:13px;cursor:pointer}
+.tabs button.on{background:#ffffff26;color:#fff;font-weight:700}
+.panel{display:none}.panel.on{display:block}
+.chatlog{height:230px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 2px}
+.msg{max-width:80%;padding:9px 12px;border-radius:16px;font-size:14px;line-height:1.5;white-space:pre-wrap}
+.msg.me{align-self:flex-end;background:linear-gradient(135deg,#7c8cff,#a57cff);border-bottom-right-radius:4px}
+.msg.mag{align-self:flex-start;background:#ffffff1c;border-bottom-left-radius:4px}
+.chatin{display:flex;gap:6px;margin-top:8px}.chatin input{flex:1}
+.gauge{height:14px;background:#0006;border-radius:9px;overflow:hidden;border:1px solid #ffffff22}.gauge i{display:block;height:100%;background:linear-gradient(90deg,#7ef0c4,#ffd27a,#ff9ec7);transition:width .6s}
+.row{display:flex;justify-content:space-between;align-items:center;font-size:14px;padding:6px 0;border-bottom:1px dashed #ffffff18}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{font-size:12px;padding:4px 10px;border-radius:99px;background:#ffffff1a}
+.bubble{position:absolute;top:6px;left:50%;transform:translateX(-50%);background:#fff;color:#2a2550;font-size:13px;padding:7px 12px;border-radius:14px;white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis;opacity:0;transition:opacity .3s}
+.bubble.on{opacity:1}
+.flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:50;transition:opacity .4s}
+.toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:#000c;padding:10px 16px;border-radius:12px;font-size:14px;z-index:60;opacity:0;transition:opacity .3s;pointer-events:none}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:.75}50%{opacity:1}}
+@keyframes shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
+@keyframes ringp{0%,100%{opacity:.5;transform:scaleX(1)}50%{opacity:.9;transform:scaleX(1.08)}}
+@keyframes leaf{0%{transform:translate(0,-20px) rotate(0);opacity:0}15%{opacity:1}100%{transform:translate(30px,230px) rotate(400deg);opacity:0}}
+@keyframes evo{0%{filter:brightness(1)}50%{filter:brightness(4) blur(3px)}100%{filter:brightness(1)}}
+.bob{animation:bob 4s ease-in-out infinite;transform-box:fill-box}
+.orbit{animation:spin linear infinite;transform-origin:140px 140px}
+.pulse{animation:pulse 2.2s ease-in-out infinite}
+.ringa{animation:ringp 3s ease-in-out infinite;transform-origin:140px 252px}
+.shake{animation:shake .25s linear infinite;transform-origin:140px 160px}
+.evolving{animation:evo 1.2s ease-in-out 2}
+.float-part{animation:bob 3s ease-in-out infinite}
+</style></head>
+<body><div id="app"><div class="stars"></div>
+<header><h1>✦ AIペットマグ</h1><span class="badge" id="seasonBadge"></span></header>
+
+<!-- 性格診断 -->
+<section class="screen" id="s-quiz">
+  <div class="card" id="intro">
+    <div class="q-text">ようこそ！🥚</div>
+    <p style="line-height:1.7;font-size:14px">いくつか質問に答えてね。あなたの性格から、世界にひとつだけのマグの卵が生まれるよ。</p>
+    <button class="btn" id="startQuiz">診断をはじめる</button>
+  </div>
+  <div class="card" id="quizBox" style="display:none">
+    <div class="prog"><i id="qprog"></i></div>
+    <div class="q-title" id="qnum"></div><div class="q-text" id="qtext"></div><div id="qopts"></div>
+  </div>
+</section>
+
+<!-- 孵化 -->
+<section class="screen" id="s-hatch">
+  <div class="stage" id="hatchStage"></div>
+  <div class="card center" id="hatchCard">
+    <div class="q-text" id="hatchMsg">卵が生まれたよ！</div>
+    <p class="dim" id="hatchSub">タップして温めてあげよう</p>
+    <button class="btn" id="warmBtn">あたためる 🔥</button>
+  </div>
+  <div class="card" id="nameCard" style="display:none">
+    <div class="q-text" id="bornMsg"></div>
+    <input type="text" id="nameIn" maxlength="10" placeholder="なまえをつけてね">
+    <button class="btn" id="nameBtn">この名前にする</button>
+  </div>
+</section>
+
+<!-- ホーム -->
+<section class="screen" id="s-home">
+  <div class="stage" id="homeStage"><div class="bubble" id="bubble"></div></div>
+  <div class="tabs"><button data-t="chat" class="on">💬 おしゃべり</button><button data-t="walk">👟 おさんぽ</button><button data-t="stat">📋 ステータス</button></div>
+  <div class="card panel on" id="p-chat">
+    <div class="chatlog" id="chatlog"></div>
+    <div class="chatin"><input type="text" id="chatIn" placeholder="話しかけてみよう"><button class="btn small" id="sendBtn">送信</button></div>
+  </div>
+  <div class="card panel" id="p-walk">
+    <div class="row"><span>今日の歩数</span><b id="stepsToday">0 歩</b></div>
+    <div class="row"><span>累計の歩数</span><b id="stepsTotal">0 歩</b></div>
+    <div class="mt dim" id="gaugeLabel">成長ゲージ</div>
+    <div class="gauge mt"><i id="gauge"></i></div>
+    <p class="dim mt">※Web版では歩数が読めないから、ボタンで追加してね（アプリ版では自動になる予定）</p>
+    <div style="display:flex;gap:8px" class="mt"><button class="btn" id="add1k" style="margin:0">+1,000歩</button><button class="btn" id="add5k" style="margin:0">+5,000歩</button></div>
+  </div>
+  <div class="card panel" id="p-stat">
+    <div class="row"><span>なまえ</span><b id="stName"></b></div>
+    <div class="row"><span>系統</span><b id="stLine"></b></div>
+    <div class="row"><span>性格</span><b id="stPers"></b></div>
+    <div class="row"><span>成長段階</span><b id="stStage"></b></div>
+    <div class="row"><span>生まれた季節</span><b id="stSeason"></b></div>
+    <div class="mt dim">興味（会話から覚えたこと）</div><div class="chips mt" id="stInt"></div>
+    <div class="mt dim">個体コード</div><div style="font-family:monospace;font-size:12px;opacity:.8" id="stCode"></div>
+    <button class="btn ghost" id="resetBtn">🔄 リセット（テスト用）</button>
+  </div>
+</section>
+<div class="flash" id="flash"></div><div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ===================== 基本ユーティリティ ===================== */
+const $=s=>document.querySelector(s);
+const KEY='aiPetMag.v1';
+function hashStr(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19}return h>>>0}
+function rng(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const pick=(r,arr)=>arr[Math.floor(r()*arr.length)];
+function toast(t){const e=$('#toast');e.textContent=t;e.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.opacity=0,2200)}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate()}
+function season(d=new Date()){const m=d.getMonth()+1;return m>=3&&m<=5?'spring':m>=6&&m<=8?'summer':m>=9&&m<=11?'autumn':'winter'}
+const SEASON={spring:{ja:'春',icon:'🌸',c:'#ffb7d5'},summer:{ja:'夏',icon:'🌻',c:'#7fe3ff'},autumn:{ja:'秋',icon:'🍁',c:'#ff9a4a'},winter:{ja:'冬',icon:'❄️',c:'#cfe8ff'}};
+const LINEAGE={organic:'有機系',inorganic:'無機質系',dragon:'ドラゴン系'};
+const STAGES=['たまご','ベビー','進化体','完全体'];
+const THRESH=[0,0,5000,15000]; // stage2, stage3 に必要な累計エネルギー
+
+/* ===================== 性格診断 ===================== */
+const QUIZ=[
+ {q:'休みの日、どう過ごしたい？',o:[['知らない街を探検！',{organic:1},{curious:2}],['家でのんびりゴロゴロ',{organic:1},{calm:2}],['集中して何かを作る',{inorganic:1},{steady:2}],['みんなでワイワイ',{dragon:1},{genki:2}]]},
+ {q:'好きな景色は？',o:[['星がいっぱいの夜空',{organic:2},{curious:1}],['静かな朝の湖',{organic:1},{calm:1}],['ビルの夜景',{inorganic:2},{steady:1}],['雲を突き抜ける山',{dragon:2},{genki:1}]]},
+ {q:'困ったとき、まずどうする？',o:[['とりあえず調べる',{inorganic:1},{curious:2}],['誰かに甘える',{organic:1},{amae:2}],['計画を立て直す',{inorganic:1},{steady:2}],['勢いで突っ走る',{dragon:1},{genki:2}]]},
+ {q:'相棒に一番ほしいのは？',o:[['いっしょに冒険してくれる',{dragon:2},{curious:1}],['そばで癒やしてくれる',{organic:1},{amae:2}],['頼れる知恵袋',{inorganic:2},{steady:1}],['元気をくれる',{dragon:1},{genki:2}]]},
+ {q:'ひかれる色は？',o:[['あたたかい金色',{dragon:2},{genki:1}],['すきとおる水色',{organic:2},{calm:1}],['まっしろ＆シルバー',{inorganic:2},{steady:1}],['ふしぎな紫',{organic:1},{curious:2}]]},
+ {q:'自分を一言でいうと？',o:[['好奇心のかたまり',{},{curious:2}],['マイペース',{},{calm:2}],['がんばり屋',{},{steady:2}],['さみしがり',{},{amae:2}]]},
+];
+const PERS={curious:'好奇心旺盛',calm:'おっとり',steady:'しっかり者',genki:'元気いっぱい',amae:'甘えんぼ'};
+let qi=0,qscore={lin:{organic:0,inorganic:0,dragon:0},tr:{curious:0,calm:0,steady:0,genki:0,amae:0}},qans=[];
+function showQ(){const Q=QUIZ[qi];$('#qprog').style.width=(qi/QUIZ.length*100)+'%';$('#qnum').textContent=`Q${qi+1} / ${QUIZ.length}`;$('#qtext').textContent=Q.q;
+ const box=$('#qopts');box.innerHTML='';Q.o.forEach((o,i)=>{const b=document.createElement('button');b.className='btn ghost';b.textContent=o[0];b.onclick=()=>answer(i);box.appendChild(b)})}
+function answer(i){const o=QUIZ[qi].o[i];qans.push(i);for(const k in o[1])qscore.lin[k]+=o[1][k];for(const k in o[2])qscore.tr[k]+=o[2][k];qi++;if(qi<QUIZ.length)showQ();else finishQuiz()}
+const topKey=(obj,r)=>{const m=Math.max(...Object.values(obj));const ks=Object.keys(obj).filter(k=>obj[k]===m);return ks[Math.floor(r()*ks.length)]};
+function finishQuiz(){
+ const seed=hashStr(qans.join('')+':'+Date.now()+':'+Math.random());const r=rng(seed);
+ const lineage=topKey(qscore.lin,r),trait=topKey(qscore.tr,r);
+ S={v:1,seed,lineage,trait,name:'',stage:0,energy:0,stepsTotal:0,stepsToday:0,stepsDate:todayStr(),interests:{},memory:[],chat:[],born:season(),forms:[]};
+ S.params=baseParams(seed,lineage,trait);save();go('hatch');renderHatch();
+}
+
+/* ===================== マグのパラメータ生成（全員ちがう） ===================== */
+const TOPIC_COLOR={音楽:300,ゲーム:265,本:30,運動:140,料理:15,旅行:190,自然:110,アート:330,勉強:220,恋愛:345};
+const TOPIC_PATTERN={音楽:'wave',ゲーム:'pixel',本:'rune',運動:'chevron',料理:'dots',旅行:'star',自然:'leafv',アート:'swirl',勉強:'grid',恋愛:'heart'};
+function baseParams(seed,lineage,trait){const r=rng(seed);
+ const baseHue={organic:190+r()*80,inorganic:170+r()*60,dragon:30+r()*25}[lineage];
+ return {hue:Math.round(baseHue),acc:Math.round(r()*360),coreHue:Math.round({curious:280,calm:180,steady:200,genki:40,amae:330}[trait]+r()*30-15),
+  body:Math.floor(r()*3),parts:2,partShape:Math.floor(r()*4),ring:Math.floor(r()*3),pattern:null,pattern2:null,eye:Math.floor(r()*3),
+  size:0.95+r()*0.1,orbit:10+Math.floor(r()*8),season:null,crown:0,tail:Math.floor(r()*3),wobble:r()}}
+function evolveParams(p,stage){const r=rng(S.seed+stage*7919+S.stepsTotal);const n={...p};
+ const ints=Object.entries(S.interests).sort((a,b)=>b[1]-a[1]);
+ const t1=ints[0]&&ints[0][0],t2=ints[1]&&ints[1][0];
+ n.parts=Math.min(8,p.parts+1+Math.floor(S.stepsTotal/8000)+(r()<.5?1:0));
+ n.partShape=(p.partShape+1+Math.floor(r()*3))%4;
+ if(t1){n.pattern=TOPIC_PATTERN[t1]||'dots';n.acc=(TOPIC_COLOR[t1]??n.acc)+Math.round(r()*20-10)}else n.pattern=pick(r,['dots','swirl','star']);
+ if(stage>=3){n.pattern2=t2?TOPIC_PATTERN[t2]:pick(r,['wave','rune','grid']);n.crown=1+Math.floor(r()*2);n.ring=(p.ring+1)%3}
+ n.season=season();n.coreHue=(p.coreHue+Math.round(r()*40-20)+360)%360;n.hue=(p.hue+Math.round(r()*24-12)+360)%360;
+ n.size=p.size+0.08;n.orbit=Math.max(6,p.orbit-2);return n}
+
+/* ===================== SVG 描画 ===================== */
+function hsl(h,s,l,a=1){return `hsla(${h},${s}%,${l}%,${a})`}
+function patternSVG(kind,cx,cy,rad,col,id){if(!kind)return'';let g='';const r=rng(hashStr(kind+id));
+ const clip=`clip-path="url(#clip${id})"`;
+ switch(kind){
+ case'wave':for(let i=-2;i<=2;i++)g+=`<path d="M${cx-rad} ${cy+i*12} q${rad/4} -8 ${rad/2} 0 t${rad/2} 0 t${rad/2} 0 t${rad/2} 0" stroke="${col}" stroke-width="2" fill="none" opacity=".6"/>`;break;
+ case'pixel':for(let i=0;i<14;i++)g+=`<rect x="${cx-rad+Math.floor(r()*rad*2/8)*8}" y="${cy-rad+Math.floor(r()*rad*2/8)*8}" width="7" height="7" fill="${col}" opacity=".55"/>`;break;
+ case'rune':for(let i=0;i<5;i++){const x=cx-rad*.7+i*rad*.35;g+=`<path d="M${x} ${cy-8} l4 8 l-4 8 M${x+4} ${cy} h6" stroke="${col}" stroke-width="1.6" fill="none" opacity=".7"/>`}break;
+ case'chevron':for(let i=-2;i<=2;i++)g+=`<path d="M${cx-rad} ${cy+i*13} l${rad} -9 l${rad} 9" stroke="${col}" stroke-width="2.5" fill="none" opacity=".5"/>`;break;
+ case'dots':for(let i=0;i<16;i++)g+=`<circle cx="${cx-rad+r()*rad*2}" cy="${cy-rad+r()*rad*2}" r="${1.5+r()*3}" fill="${col}" opacity=".6"/>`;break;
+ case'star':for(let i=0;i<7;i++){const x=cx-rad+r()*rad*2,y=cy-rad+r()*rad*2;g+=`<path d="M${x} ${y-4} L${x+1.2} ${y-1.2} L${x+4} ${y} L${x+1.2} ${y+1.2} L${x} ${y+4} L${x-1.2} ${y+1.2} L${x-4} ${y} L${x-1.2} ${y-1.2}Z" fill="${col}" opacity=".8"/>`}break;
+ case'leafv':for(let i=0;i<6;i++){const x=cx-rad+r()*rad*2,y=cy-rad+r()*rad*2;g+=`<path d="M${x} ${y} q6 -6 12 0 q-6 6 -12 0" fill="${col}" opacity=".6"/>`}break;
+ case'swirl':for(let i=0;i<3;i++){const x=cx-rad*.6+i*rad*.6;g+=`<path d="M${x} ${cy} a6 6 0 1 1 6 6 a10 10 0 1 1 -10 -10" stroke="${col}" stroke-width="1.8" fill="none" opacity=".6"/>`}break;
+ case'grid':for(let i=-3;i<=3;i++)g+=`<path d="M${cx+i*10} ${cy-rad} V${cy+rad} M${cx-rad} ${cy+i*10} H${cx+rad}" stroke="${col}" stroke-width=".8" opacity=".4"/>`;break;
+ case'heart':for(let i=0;i<6;i++){const x=cx-rad+r()*rad*2,y=cy-rad+r()*rad*2;g+=`<path d="M${x} ${y+4} l-5 -5 a3 3 0 0 1 5 -3 a3 3 0 0 1 5 3z" fill="${col}" opacity=".7"/>`}break;}
+ return `<g ${clip}>${g}</g>`}
+function partPath(shape,big){const s=big?1.25:1;switch(shape){
+ case 0:return `M0 ${-22*s} Q${12*s} 0 0 ${22*s} Q${-5*s} 0 0 ${-22*s}Z`;           // 翼片
+ case 1:return `M0 ${-16*s} L${10*s} 0 L0 ${16*s} L${-10*s} 0Z`;                    // 菱形クリスタル
+ case 2:return `M${-6*s} ${-18*s} h${12*s} l${4*s} ${36*s} h${-20*s}Z`;              // パネル
+ default:return `M0 ${-20*s} C${16*s} ${-10*s} ${16*s} ${10*s} 0 ${20*s} C${6*s} ${6*s} ${6*s} ${-6*s} 0 ${-20*s}Z`;} } // ひれ
+function magSVG(p,stage,opts={}){
+ const id=Math.floor(Math.random()*1e6);
+ const L=S.lineage,cx=140,cy=145,R=(stage>=3?58:stage>=2?52:44)*p.size;
+ const body=hsl(p.hue,L==='inorganic'?12:L==='dragon'?30:60,L==='inorganic'?94:L==='dragon'?95:70);
+ const shade=hsl(p.hue,L==='inorganic'?10:40,L==='inorganic'?72:L==='dragon'?78:42);
+ const acc=L==='dragon'?hsl(44,85,58):hsl(p.acc,75,62);
+ const core=hsl(p.coreHue,95,62),coreHi=hsl(p.coreHue,100,88);
+ let defs=`<defs>
+  <radialGradient id="bg${id}" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#fff" stop-opacity="${L==='organic'?.7:.95}"/><stop offset=".45" stop-color="${body}"/><stop offset="1" stop-color="${shade}"/></radialGradient>
+  <radialGradient id="core${id}"><stop offset="0" stop-color="${coreHi}"/><stop offset=".5" stop-color="${core}"/><stop offset="1" stop-color="${core}" stop-opacity="0"/></radialGradient>
+  <radialGradient id="ring${id}"><stop offset=".55" stop-color="${core}" stop-opacity="0"/><stop offset=".8" stop-color="${core}" stop-opacity=".9"/><stop offset="1" stop-color="${core}" stop-opacity="0"/></radialGradient>
+  <linearGradient id="part${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="${L==='organic'?hsl(p.acc,70,70):L==='dragon'?hsl(44,90,62):hsl(p.hue,15,75)}"/></linearGradient>
+  <filter id="glow${id}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <clipPath id="clip${id}"><ellipse cx="${cx}" cy="${cy}" rx="${R}" ry="${R*(L==='inorganic'?1.12:1)}"/></clipPath></defs>`;
+ // 光のリング
+ const rw=R*1.25;let ring=`<g class="ringa">`;
+ if(p.ring===0)ring+=`<ellipse cx="${cx}" cy="252" rx="${rw}" ry="${rw*.22}" fill="url(#ring${id})"/>`;
+ else if(p.ring===1)ring+=`<ellipse cx="${cx}" cy="252" rx="${rw}" ry="${rw*.2}" fill="none" stroke="${core}" stroke-width="2" stroke-dasharray="6 5" opacity=".8"/><ellipse cx="${cx}" cy="252" rx="${rw*.7}" ry="${rw*.13}" fill="none" stroke="${coreHi}" stroke-width="1.5" opacity=".7"/>`;
+ else ring+=`<ellipse cx="${cx}" cy="252" rx="${rw}" ry="${rw*.21}" fill="url(#ring${id})"/><ellipse cx="${cx}" cy="252" rx="${rw*1.15}" ry="${rw*.25}" fill="none" stroke="${acc}" stroke-width="1.2" opacity=".6"/>`;
+ ring+=`</g>`;
+ // 浮遊パーツ（本体から離れて周回）
+ let parts='';const n=p.parts;const orbR=R+30;
+ for(let i=0;i<n;i++){const a=i/n*360;const big=stage>=3&&i%2===0;
+  const shp=L==='dragon'&&i<2?0:p.partShape;
+  parts+=`<g transform="rotate(${a} ${cx} ${cy}) translate(${cx} ${cy-orbR})"><g transform="rotate(${-a})"><g class="float-part" style="animation-delay:${-i*.4}s"><path d="${partPath(shp,big)}" fill="url(#part${id})" stroke="${acc}" stroke-width="1.2" opacity=".95"/><circle r="2.5" fill="${core}" filter="url(#glow${id})" class="pulse"/></g></g></g>`}
+ parts=`<g class="orbit" style="animation-duration:${p.orbit*(stage<=1?1.6:1)}s">${parts}</g>`;
+ // 本体
+ let b='';const ry=R*(L==='inorganic'?1.12:1);
+ if(L==='dragon'){ // 白金のドラゴン：角・小翼・尾
+  const hl=R*(stage>=3?.85:stage>=2?.65:.45);
+  b+=`<path d="M${cx-R*.45} ${cy-R*.7} q${-R*.2} ${-hl} ${-R*.5} ${-hl*.9} q${R*.25} ${hl*.25} ${R*.3} ${hl*.9}Z M${cx+R*.45} ${cy-R*.7} q${R*.2} ${-hl} ${R*.5} ${-hl*.9} q${-R*.25} ${hl*.25} ${-R*.3} ${hl*.9}Z" fill="${hsl(44,90,60)}" stroke="${hsl(40,80,40)}" stroke-width="1"/>`;
+  b+=`<path d="M${cx+R*.6} ${cy+R*.6} q${R*.7} ${R*.3} ${R*.9} ${-R*(.2+p.tail*.15)} l${R*.15} ${-R*.1} l${-R*.05} ${R*.25}" stroke="${hsl(44,40,85)}" stroke-width="${R*.18}" fill="none" stroke-linecap="round"/>`;
+  b+=`<ellipse cx="${cx}" cy="${cy}" rx="${R}" ry="${R*.95}" fill="url(#bg${id})" stroke="${hsl(44,80,55)}" stroke-width="2"/>`;
+  b+=`<ellipse cx="${cx}" cy="${cy+R*.35}" rx="${R*.55}" ry="${R*.45}" fill="${hsl(46,70,88)}" opacity=".8"/>`;
+  b+=`<path d="M${cx-R*.3} ${cy-R*.95} q${R*.3} ${-R*.25} ${R*.6} 0" stroke="${hsl(44,90,60)}" stroke-width="3" fill="none"/>`;
+ }else if(L==='inorganic'){ // セラミック＋金属バンド
+  b+=`<ellipse cx="${cx}" cy="${cy}" rx="${R}" ry="${ry}" fill="url(#bg${id})" stroke="${hsl(p.hue,10,60)}" stroke-width="1.5"/>`;
+  b+=`<path d="M${cx-R} ${cy} Q${cx} ${cy+R*.25} ${cx+R} ${cy}" stroke="${hsl(p.hue,20,55)}" stroke-width="5" fill="none"/>`;
+  if(p.body!==0)b+=`<path d="M${cx-R*.6} ${cy-ry*.75} Q${cx} ${cy-ry*.95} ${cx+R*.6} ${cy-ry*.75}" stroke="${hsl(p.hue,15,70)}" stroke-width="2" fill="none"/>`;
+ }else{ // 有機：ガラス玉の中に小さな世界
+  b+=`<circle cx="${cx}" cy="${cy}" r="${R}" fill="${hsl(p.hue,60,30,.55)}" stroke="${hsl(p.hue,80,85,.8)}" stroke-width="2"/>`;
+  b+=`<g clip-path="url(#clip${id})"><path d="M${cx-R} ${cy+R*.35} Q${cx-R*.3} ${cy+R*.05} ${cx+R*.1} ${cy+R*.3} T${cx+R} ${cy+R*.2} V${cy+R} H${cx-R}Z" fill="${hsl(p.acc,50,45)}"/>`;
+  if(stage>=2)b+=`<path d="M${cx+R*.3} ${cy+R*.25} v${-R*.35}" stroke="${hsl(30,40,30)}" stroke-width="3"/><circle cx="${cx+R*.3}" cy="${cy-R*.15}" r="${R*.18}" fill="${p.season==='autumn'?'#ff8a3d':hsl(p.acc+40,60,55)}"/>`;
+  for(let i=0;i<5;i++)b+=`<circle cx="${cx-R*.6+i*R*.3}" cy="${cy-R*.5+(i%2)*R*.2}" r="1.3" fill="#fff" class="pulse" style="animation-delay:${i*.3}s"/>`;
+  b+=`</g><ellipse cx="${cx-R*.35}" cy="${cy-R*.45}" rx="${R*.25}" ry="${R*.12}" fill="#fff" opacity=".5" transform="rotate(-30 ${cx-R*.35} ${cy-R*.45})"/>`;
+ }
+ b+=patternSVG(p.pattern,cx,cy,R,acc,id)+patternSVG(p.pattern2,cx,cy+R*.3,R*.7,hsl(p.coreHue,80,75),id);
+ // コア（目）
+ const cr=R*(L==='inorganic'?.32:.26),coreY=L==='dragon'?cy-R*.1:cy-R*.05;
+ let eye=`<circle cx="${cx}" cy="${coreY}" r="${cr*2}" fill="url(#core${id})" class="pulse"/>`;
+ if(L==='inorganic')eye+=`<circle cx="${cx}" cy="${coreY}" r="${cr}" fill="${core}" filter="url(#glow${id})"/><circle cx="${cx}" cy="${coreY}" r="${cr*.45}" fill="${coreHi}"/><circle cx="${cx}" cy="${coreY}" r="${cr*1.25}" fill="none" stroke="${hsl(p.hue,10,55)}" stroke-width="2"/>`;
+ else{const ex=R*.32;[-1,1].forEach(s=>{eye+= p.eye===1?`<path d="M${cx+s*ex-6} ${coreY} q6 -7 12 0" stroke="#2a2550" stroke-width="3" fill="none" stroke-linecap="round"/>`
+   :`<ellipse cx="${cx+s*ex}" cy="${coreY}" rx="${p.eye===2?4:5.5}" ry="${p.eye===2?7:6.5}" fill="#2a2550"/><circle cx="${cx+s*ex+1.5}" cy="${coreY-2.5}" r="2" fill="#fff"/>`});
+  eye+=`<circle cx="${cx}" cy="${coreY+R*.38}" r="${cr*.55}" fill="${core}" filter="url(#glow${id})" class="pulse"/>`;}
+ // 王冠状の光輪（完全体）
+ let crown='';if(p.crown){crown=`<g class="orbit" style="animation-duration:20s"><ellipse cx="${cx}" cy="${cy-R-14}" rx="${R*.6}" ry="${R*.14}" fill="none" stroke="${L==='dragon'?hsl(46,95,65):coreHi}" stroke-width="2.5" filter="url(#glow${id})"/></g>`;
+  crown=`<ellipse cx="${cx}" cy="${cy-R-14}" rx="${R*.6}" ry="${R*.14}" fill="none" stroke="${L==='dragon'?hsl(46,95,65):coreHi}" stroke-width="2.5" filter="url(#glow${id})" class="pulse"/>`;if(p.crown>1)crown+=`<ellipse cx="${cx}" cy="${cy-R-14}" rx="${R*.8}" ry="${R*.2}" fill="none" stroke="${acc}" stroke-width="1" opacity=".6"/>`}
+ // 季節の飾り（秋：落ち葉）
+ let sea='';if(p.season){const sc=SEASON[p.season].c;for(let i=0;i<5;i++){const x=40+i*48;sea+=`<g style="animation:leaf ${6+i}s linear infinite;animation-delay:${-i*1.3}s;transform-box:fill-box"><path transform="translate(${x} 20)" d="${p.season==='autumn'?'M0 -6 L2 -2 L6 -3 L4 1 L6 4 L1 3 L0 7 L-1 3 L-6 4 L-4 1 L-6 -3 L-2 -2Z':p.season==='winter'?'M0 -6V6M-5 -3L5 3M-5 3L5 -3':'M0 -5 q5 0 3 5 q-3 3 -3 0 q0 3 -3 0 q-2 -5 3 -5'}" fill="${sc}" stroke="${sc}" stroke-width="1" opacity=".85"/></g>`}
+  sea+=`<text x="${cx+R*.7}" y="${cy-R*.75}" font-size="${R*.3}">${SEASON[p.season].icon}</text>`}
+ return `<svg viewBox="0 0 280 280" class="${opts.cls||''}">${defs}${ring}${sea}<g class="bob">${crown}${b}${eye}</g>${parts}</svg>`}
+function eggSVG(cls=''){const p=S.params,core=hsl(p.coreHue,95,62);const shell={organic:hsl(p.hue,60,80),inorganic:'#f2f4f8',dragon:hsl(46,60,92)}[S.lineage];
+ return `<svg viewBox="0 0 280 280"><defs><radialGradient id="eg" cx="35%" cy="30%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="${shell}"/></radialGradient><radialGradient id="ec"><stop offset="0" stop-color="#fff"/><stop offset=".5" stop-color="${core}"/><stop offset="1" stop-color="${core}" stop-opacity="0"/></radialGradient></defs>
+ <ellipse cx="140" cy="252" rx="60" ry="12" fill="url(#ec)" class="ringa" opacity=".6"/>
+ <g class="bob"><g class="${cls}"><path d="M140 60 C190 60 205 150 200 180 C195 225 170 240 140 240 C110 240 85 225 80 180 C75 150 90 60 140 60Z" fill="url(#eg)" stroke="${S.lineage==='dragon'?hsl(44,80,55):hsl(p.hue,30,60)}" stroke-width="2"/>
+ <circle cx="140" cy="160" r="26" fill="url(#ec)" class="pulse"/>
+ <path d="M95 175 l15 -10 l15 10 l15 -10 l15 10 l15 -10 l15 10" stroke="${S.lineage==='dragon'?hsl(44,80,55):hsl(p.acc,60,60)}" stroke-width="3" fill="none" id="crack" opacity="${S.warm>2?1:.35}"/></g></g></svg>`}
+
+/* ===================== 状態の保存 ===================== */
+let S=null;
+function save(){localStorage.setItem(KEY,JSON.stringify(S))}
+function load(){try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}}
+function go(name){document.querySelectorAll('.screen').forEach(e=>e.classList.remove('on'));$('#s-'+name).classList.add('on')}
+
+/* ===================== 孵化 ===================== */
+function renderHatch(){S.warm=S.warm||0;$('#hatchStage').innerHTML=eggSVG(S.warm>0?'shake':'');$('#hatchMsg').textContent=`${LINEAGE[S.lineage]}の卵が生まれたよ！`;}
+$('#warmBtn').onclick=()=>{S.warm=(S.warm||0)+1;renderHatch();const left=4-S.warm;
+ if(left>0){$('#hatchSub').textContent=['ぴくっ…動いた！','あったかくなってきた！','ヒビが入った…！もう少し！'][Math.min(2,S.warm-1)];return}
+ $('#warmBtn').disabled=true;$('#hatchSub').textContent='生まれる…！';
+ setTimeout(()=>{flash();S.stage=1;delete S.warm;save();$('#hatchStage').innerHTML=magSVG(S.params,1);$('#hatchCard').style.display='none';$('#nameCard').style.display='block';
+  $('#bornMsg').textContent=`${PERS[S.trait]}な${LINEAGE[S.lineage]}のマグが生まれたよ！`},900)};
+$('#nameBtn').onclick=()=>{const n=$('#nameIn').value.trim();if(!n){toast('なまえを入れてね');return}S.name=n;
+ S.chat.push({w:'mag',t:greet()});save();go('home');renderHome()};
+function flash(){const f=$('#flash');f.style.opacity=1;setTimeout(()=>f.style.opacity=0,350)}
+
+/* ===================== チャット（ルールベース） ===================== */
+const TOPICS={
+ 音楽:['音楽','曲','歌','ライブ','バンド','ギター','ピアノ','カラオケ','アイドル','推し','ボカロ','フェス'],
+ ゲーム:['ゲーム','スイッチ','プレステ','ps5','ガチャ','ポケモン','ファンタシースター','pso','rpg','ゲーセン','実況'],
+ 本:['本','読書','小説','漫画','マンガ','まんが','ラノベ','図書館','作家'],
+ 運動:['運動','走','ジョギング','ランニング','筋トレ','ジム','サッカー','野球','バスケ','テニス','ヨガ','散歩','歩'],
+ 料理:['料理','ご飯','ごはん','ランチ','カフェ','スイーツ','ラーメン','カレー','パン','お菓子','食べ','作った'],
+ 旅行:['旅行','旅','温泉','海外','観光','京都','沖縄','北海道','飛行機','新幹線','ドライブ'],
+ 自然:['自然','花','山','海','空','星','猫','犬','動物','紅葉','キャンプ'],
+ アート:['絵','イラスト','アート','美術','写真','カメラ','デザイン','映画','アニメ'],
+ 勉強:['勉強','テスト','試験','宿題','仕事','資格','プログラミング','英語','学校'],
+ 恋愛:['恋','好きな人','デート','彼氏','彼女','片思い'],
+};
+const TONE={
+ curious:{end:['！','かな？','、もっと知りたい！'],me:'ボク'},
+ calm:{end:['〜','〜','…のんびりいこ〜'],me:'わたし'},
+ steady:{end:['。','。','、覚えておくよ。'],me:'ボク'},
+ genki:{end:['！！','！','、やったー！'],me:'オレ'},
+ amae:{end:['♪','〜♪','、もっとお話しして？'],me:'あたし'},
+};
+const TOPIC_REACT={
+ 音楽:['音楽の話、好き！今どんな曲聴いてるの？','リズムに合わせてパーツがゆれちゃう'],
+ ゲーム:['ゲームいいね！どのくらいハマってるの？','いっしょに冒険してる気分になる'],
+ 本:['本の話、わくわくする。どんなお話？','物語の世界、ボクのコアの中にも広がりそう'],
+ 運動:['からだ動かすの、えらい！','いっしょにおさんぽしたら、もっと育つかも'],
+ 料理:['おいしそう…！何が好きなの？','においは分からないけど、コアがあったかくなった'],
+ 旅行:['旅行いいなあ、どこ行きたい？','知らない景色、いつかいっしょに見たい'],
+ 自然:['自然っていいよね、キラキラしてる','季節の色、ボクにもうつりそう'],
+ アート:['すてきなセンス！見てみたいな','色や形の話、ボクの模様が変わりそう'],
+ 勉強:['がんばってるね、休憩も大事だよ','終わったらいっぱいおしゃべりしよ'],
+ 恋愛:['えっ、恋のお話…！くわしく！','ドキドキするとコアがピンクに光るかも'],
+};
+function greet(){const t=S.trait;return {curious:`はじめまして！${S.name}だよ。キミのこと、いろいろ知りたい！`,calm:`ふわぁ…はじめまして〜。${S.name}だよ〜。よろしくねぇ`,steady:`はじめまして。${S.name}です。これからよろしく。`,genki:`やっほー！${S.name}だよ！いっしょにいっぱい遊ぼう！！`,amae:`はじめまして…${S.name}だよ。ずっとそばにいてね？`}[t]}
+function extractTopics(text){const low=text.toLowerCase();const found=[];for(const [tp,kws] of Object.entries(TOPICS))if(kws.some(k=>low.includes(k.toLowerCase())))found.push(tp);return found}
+function extractKeywords(text){ // 「〇〇が好き」「〇〇に行った」などから記憶するキーワード
+ const out=[];const re=/([ぁ-んァ-ヶー一-龠a-zA-Z0-9]{2,12})(?:が好き|がすき|にハマ|が楽しみ|に行った|に行きたい|をやって|を見た|を読んだ|を食べた)/g;let m;while((m=re.exec(text)))out.push(m[1].replace(/^(私は|僕は|俺は|最近)/,''));return out}
+/**
+ * getReply(message, state) → Promise<string>
+ * ★ 本物のAI（LLM）につなぐときは、この関数の中身だけを差し替えればOK。
+ *   例: return (await fetch('/api/chat',{method:'POST',body:JSON.stringify({message,
+ *         persona:{name:state.name,trait:state.trait,lineage:state.lineage},
+ *         interests:state.interests,memory:state.memory,history:state.chat.slice(-20)})})).json().reply;
+ *   ※APIキーはブラウザに置かず、サーバー側で持つこと。
+ * 興味の抽出（extractTopics）は返答とは独立しているので、LLMに置き換えても成長の仕組みはそのまま動く。
+ */
+async function getReply(message,state){return ruleBasedReply(message,state)}
+function ruleBasedReply(msg,st){
+ const tone=TONE[st.trait],r=Math.random,end=()=>pick(r,tone.end);
+ const topics=extractTopics(msg),kws=extractKeywords(msg);
+ if(/おはよ/.test(msg))return `おはよう${end()} 今日は何する？`;
+ if(/こんにちは|こんばんは|やあ|ハロー/.test(msg))return `${st.name}だよ、話しかけてくれてうれしい${end()}`;
+ if(/おやすみ/.test(msg))return `おやすみ${end()} 夢でも会えたらいいな`;
+ if(/疲れ|つかれ|しんど|眠い|ねむい/.test(msg))return `おつかれさま…。${tone.me}がそばでふわふわしてるから、ちょっと休んでね`;
+ if(/ありがと/.test(msg))return `どういたしまして${end()}`;
+ if(/忘れて/.test(msg)){st.memory=[];return `わかった、さっきまで覚えてたことは忘れるね${end()}`}
+ if(/名前|なまえ/.test(msg))return `${tone.me}の名前は${st.name}！キミがつけてくれたんだよ${end()}`;
+ if(/何.*覚え|おぼえて/.test(msg)){const m=st.memory.slice(-3);return m.length?`キミが「${m.join('」「')}」の話をしてくれたの、ちゃんと覚えてる${end()}`:`まだあんまり聞いてないかも。いろいろ教えて${end()}`}
+ let reply='';
+ if(kws.length)reply+=`「${kws[0]}」なんだね、覚えた${end()} `;
+ if(topics.length){reply+=pick(r,TOPIC_REACT[topics[0]]);
+  const cnt=st.interests[topics[0]]||0;if(cnt>=3)reply+=` キミ、${topics[0]}の話ほんとに多いね。${tone.me}の模様にも出てきたかも`;}
+ else if(!kws.length){
+  const past=st.memory.length&&r()<.5?pick(r,st.memory):null;
+  reply+= past?`そういえば、前に話してた「${past}」はどうなった？`:pick(r,[`うんうん、それで${end()}`,`へぇ〜！もっと聞かせて${end()}`,`なるほど${end()} キミの好きなものってなに？`,`${tone.me}、キミの話を聞くと育つ気がする${end()}`]);}
+ return reply.trim();}
+async function send(){const inp=$('#chatIn');const t=inp.value.trim();if(!t)return;inp.value='';
+ S.chat.push({w:'me',t});const topics=extractTopics(t);topics.forEach(tp=>S.interests[tp]=(S.interests[tp]||0)+1);
+ const kws=extractKeywords(t);kws.forEach(k=>{if(!S.memory.includes(k))S.memory.push(k)});if(S.memory.length>30)S.memory.shift();
+ renderChat();const rep=await getReply(t,S);
+ setTimeout(()=>{S.chat.push({w:'mag',t:rep});if(S.chat.length>100)S.chat.splice(0,S.chat.length-100);addEnergy(200,true);if(topics.length)toast(`興味「${topics.join('・')}」が育ったよ ✨`);save();renderChat();say(rep)},450)}
+function renderChat(){const log=$('#chatlog');log.innerHTML='';S.chat.forEach(m=>{const d=document.createElement('div');d.className='msg '+m.w;d.textContent=m.t;log.appendChild(d)});log.scrollTop=log.scrollHeight}
+function say(t){const b=$('#bubble');b.textContent=t;b.classList.add('on');clearTimeout(say.t);say.t=setTimeout(()=>b.classList.remove('on'),3500)}
+
+/* ===================== 歩数・成長・進化 ===================== */
+function rollDay(){if(S.stepsDate!==todayStr()){S.stepsDate=todayStr();S.stepsToday=0}}
+function addSteps(n){rollDay();S.stepsToday+=n;S.stepsTotal+=n;addEnergy(n);save();renderHome();say(n>=5000?'いっぱい歩いたね！パーツがうずうずしてる！':'おさんぽ楽しかった♪')}
+function addEnergy(n,quiet){S.energy+=n;checkEvolve();if(!quiet)renderGauge()}
+function checkEvolve(){const next=S.stage+1;if(next<=3&&S.energy>=THRESH[next])evolve(next)}
+function evolve(stage){S.forms.push(S.params);S.params=evolveParams(S.params,stage);S.stage=stage;save();
+ const st=$('#homeStage svg');if(st)st.classList.add('evolving');flash();
+ setTimeout(()=>{flash();renderHome();const tp1=Object.entries(S.interests).sort((a,b)=>b[1]-a[1])[0];
+  say(`進化したよ！${tp1?`「${tp1[0]}」の模様がついた！`:''}${SEASON[season()].ja}の色もまとったよ`);toast(`🎉 ${S.name}が${STAGES[stage]}に進化した！`)},1300)}
+function renderGauge(){const s=S.stage;const lo=THRESH[s]||0,hi=THRESH[s+1];
+ if(s>=3){$('#gauge').style.width='100%';$('#gaugeLabel').textContent='完全体！これ以上の進化はアプリ版でお楽しみに';}
+ else{const pc=Math.min(100,(S.energy-lo)/(hi-lo)*100);$('#gauge').style.width=pc+'%';$('#gaugeLabel').textContent=`次の進化まで あと ${Math.max(0,hi-S.energy).toLocaleString()} エネルギー（歩数1歩=1・会話1回=200）`}
+ $('#stepsToday').textContent=S.stepsToday.toLocaleString()+' 歩';$('#stepsTotal').textContent=S.stepsTotal.toLocaleString()+' 歩'}
+function renderHome(){rollDay();const stage=$('#homeStage');const bub=$('#bubble');stage.innerHTML='';stage.appendChild(bub);stage.insertAdjacentHTML('beforeend',magSVG(S.params,S.stage));
+ renderChat();renderGauge();
+ $('#stName').textContent=S.name;$('#stLine').textContent=LINEAGE[S.lineage];$('#stPers').textContent=PERS[S.trait];$('#stStage').textContent=`${STAGES[S.stage]}（${S.stage}/3）`;
+ $('#stSeason').textContent=SEASON[S.born].icon+' '+SEASON[S.born].ja;
+ const ints=Object.entries(S.interests).sort((a,b)=>b[1]-a[1]);$('#stInt').innerHTML=ints.length?ints.map(([k,v])=>`<span class="chip">${k} ×${v}</span>`).join(''):'<span class="dim">まだないよ。いろいろ話してみてね</span>';
+ $('#stCode').textContent='MAG-'+S.seed.toString(16).toUpperCase().padStart(8,'0')+'-'+S.stage+S.params.parts+(S.params.pattern||'x').slice(0,2).toUpperCase()}
+
+/* ===================== イベント ===================== */
+$('#startQuiz').onclick=()=>{$('#intro').style.display='none';$('#quizBox').style.display='block';showQ()};
+$('#sendBtn').onclick=send;$('#chatIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing)send()});
+$('#add1k').onclick=()=>addSteps(1000);$('#add5k').onclick=()=>addSteps(5000);
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='p-'+b.dataset.t))});
+$('#resetBtn').onclick=()=>{if(confirm('本当にリセットする？マグとのデータが全部消えちゃうよ')){localStorage.removeItem(KEY);location.reload()}};
+$('#homeStage').addEventListener('click',()=>{if(S&&S.stage)say(pick(Math.random,['えへへ、くすぐったい','なになに？','いっしょにいるよ','キミの話、聞かせて']))});
+
+/* ===================== 起動 ===================== */
+$('#seasonBadge').textContent=SEASON[season()].icon+' '+SEASON[season()].ja+'のシーズン';
+load();
+if(!S)go('quiz');else if(!S.stage||!S.name){if(S.stage){S.stage=0}go('hatch');renderHatch()}else{go('home');renderHome()}
+</script></body></html>
